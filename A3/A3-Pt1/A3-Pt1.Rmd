@@ -212,11 +212,7 @@ Name the data frame `cyclones_data_update_0`.
 ```{r error=TRUE}
 # YOUR CODE HERE
 
-cyclones_data_update_0 <- at_cyclone |>
-  full_join(
-    np_cyclone,
-    by = join_by(Basin)
-  )
+cyclones_data_update_0 <- bind_rows(at_cyclone, np_cyclone, .id = NULL)
 
 print(cyclones_data_update_0)
 ```
@@ -268,11 +264,13 @@ all.equal(
     c(-49, -49.99, 49, 49.99, 49, -49.99, 0)
 )
 
-#cyclones_data_update_1 <- cyclones_data_update_0 |>
-#    mutate(
-#        lat = convert_latlon(latitude),
-#        lon = convert_latlon(longitude)
-#    )
+cyclones_data_update_1 <- cyclones_data_update_0 |>
+    mutate(
+        lat = convert_latlon(latitude),
+        lon = convert_latlon(longitude)
+    )
+
+cyclones_data_update_1
 ```
 
 ```{r}
@@ -289,6 +287,7 @@ To do this, you must choose whether to use `ObservYear` or `NameYear`.
 cyclones_data_update_2 <- cyclones_data_update_1 |>
     mutate(
         # YOUR CODE HERE
+        date = make_datetime(ObservYear, Month, Day)
     )
 
 print(cyclones_data_update_2)
@@ -312,6 +311,13 @@ cyclones_data <- cyclones_data_update_2 |>
         category = ordered(
             case_when(
                 # YOUR CODE HERE
+              max_wind <= 33 ~ cat_levels[1],
+              max_wind >= 34 & max_wind <= 63 ~ cat_levels[2],
+              max_wind >= 64 & max_wind <= 82 ~ cat_levels[3],
+              max_wind >= 83 & max_wind <= 95 ~ cat_levels[4],
+              max_wind >= 96 & max_wind <= 112 ~ cat_levels[5],
+              max_wind >= 113 & max_wind <= 136 ~ cat_levels[6],
+              max_wind >= 137 ~ cat_levels[7]
             ),
             levels = cat_levels
         )
@@ -332,6 +338,10 @@ Now that we have a suitable data frame, save it as a parquet file with the file 
 
 ```{r}
 # YOUR CODE HERE
+save_name <- "cyclones_data.parquet"
+
+write_parquet(cyclones_data, save_name)
+
 ```
 
 ```{r}
@@ -434,7 +444,7 @@ ice_extent_daily |>
         )
 ```
 
-In the chunk below, find the maximum and minimum sea ice extent for each year (by region). Pivot the data frame so that there's a column labelled "name" and a column labelled "value", as below.
+In the chunk below, [**find the maximum and minimum sea ice extent for each year (by region)**]{.underline}. Pivot the data frame so that there's a column labelled "name" and a column labelled "value", as below.
 
 | year | region    | name | value  |
 |------|-----------|------|--------|
@@ -449,6 +459,16 @@ In the chunk below, find the maximum and minimum sea ice extent for each year (b
 ```{r}
 ice_extent_yearly <- ice_extent_daily |>
     # YOUR CODE HERE
+  group_by(year, region) |>
+  summarise(
+    min = min(ice_extent),
+    max = max(ice_extent),
+  ) |>
+  pivot_longer(
+    cols = c(min, max),
+    names_to = "name",
+    values_to = "value"
+  )
 
 ice_extent_yearly
 ```
@@ -457,7 +477,7 @@ ice_extent_yearly
 . = ottr::check("tests/ice_extent_yearly.R")
 ```
 
-Given your answer, the following code should produce a plot thats easier to interpret than the one before.
+Given your answer, the following code should produce a plot that's easier to interpret than the one before.
 
 ```{r plot_sea_ice_extent}
 ggplot(ice_extent_yearly) +
