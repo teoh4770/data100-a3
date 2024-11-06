@@ -444,7 +444,7 @@ ice_extent_daily |>
         )
 ```
 
-In the chunk below, [**find the maximum and minimum sea ice extent for each year (by region)**]{.underline}. Pivot the data frame so that there's a column labelled "name" and a column labelled "value", as below.
+In the chunk below, **find the maximum and minimum sea ice extent for each year (by region)**. Pivot the data frame so that there's a column labelled "name" and a column labelled "value", as below.
 
 | year | region    | name | value  |
 |------|-----------|------|--------|
@@ -474,6 +474,7 @@ ice_extent_yearly
 ```
 
 ```{r}
+# not sure what's the issue is although the result matched...
 . = ottr::check("tests/ice_extent_yearly.R")
 ```
 
@@ -496,6 +497,9 @@ Finally, let's save the data to `ice_extent_yeary.parquet`.
 
 ```{r sea_ice_parquet, error=TRUE}
 # YOUR CODE HERE
+save_name <- "ice_extent_yeary.parquet"
+
+write_parquet(ice_extent_yearly, save_name)
 ```
 
 ```{r}
@@ -548,11 +552,11 @@ climate_awareness
 
 # COVID Data from Our World In Data
 
-Perhaps theres some relationship between governments' response to the pandemic and governments' response to climate change? The following data will load in some information about COVID-19 in countries around the world.
+[Perhaps theres some relationship between governments' response to the pandemic and governments' response to climate change]{.underline}? The following data will load in some information about COVID-19 in countries around the world.
 
 ```{r}
-owid_address <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
-covid_cases <- owid_address |>
+covid_address <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+covid_cases <- covid_address |>
     read_csv(
         col_types = cols(
             .default = col_double(),
@@ -575,6 +579,16 @@ In the chunk below, aggregate the data to be total cases in 2020, by country. Yo
 
 ```{r covid_2020, error=TRUE}
 # YOUR CODE HERE
+# aggregate the data to be total cases in 2020, by country
+# solution should have country, continent, total cases, 
+covid_2020 <- covid_cases |>
+  filter(year(date) == 2020) |>
+  group_by(location, continent) |>
+  summarise(
+    total_cases = sum(total_cases, na.rm = TRUE)
+  ) |>
+  rename(country = location)
+
 
 covid_2020
 ```
@@ -587,13 +601,16 @@ Before we move on, we'll save `covid_2020.parquet` for use in Part 2.
 
 ```{r covid_2020_parquet, error=TRUE}
 # YOUR CODE HERE
+save_name <- "covid_2020.parquet"
+
+write_parquet(covid_2020, save_name)
 ```
 
 ```{r}
 . = ottr::check("tests/covid_2020_parquet.R")
 ```
 
-As a very early exploration, let's compare climate awareness to the total number of covid cases in a country *per capita* in the year 2020.
+As a very early exploration, let's [compare climate awareness to the total number of covid cases in a country *per capita* in the year 2020]{.underline}.
 
 In order to calculate per capita values, we need the population size. The easiest way that I can find is with the R package [`wbstats`](https://cran.r-project.org/web/packages/wbstats/vignettes/wbstats.html), which pulls updated statistics from the World Bank.
 
@@ -619,7 +636,7 @@ setdiff(aware_countries, pop_countries)
 
 Many of these countries are actually in both, but have a different name! Before we can join these two data sets together, we need the primary key (`country`) to match where possible.
 
--   One pattern that I notice is that aware_countries has periods (`.`) instead of spaces. As a first step (to save us from manually entering 29 different country names twice), change all periods to spaces using `str_replace()`.
+-   One pattern that I notice is that aware_countries has periods (`.`) instead of spaces. As a first step (to save us from manually entering 29 different country names twice), **change all periods to spaces using `str_replace()`.**
     -   NOTE: The `.` is a special character in regex and needs to be [escaped](https://r4ds.hadley.nz/regexps#sec-regexp-escaping)!
 
 ```{r aware_fixed_country, error=TRUE}
@@ -627,6 +644,7 @@ aware_fixed_country <- climate_awareness |>
     mutate(
         # Replace *all* *literal* periods with a space in the country column
         # YOUR CODE HERE
+        country = str_replace_all(country,"\\.", " ")
     )
 
 aware_fixed_country |> pull(country) |> unique()
