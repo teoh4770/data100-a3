@@ -21,13 +21,13 @@ library(openxlsx)
 
 List all group members here:
 
--   
+-   David Zhao
 
--   
+-   Harsahib Grewal
 
--   
+-   Chee Kian Teoh
 
--   
+-   Dumebi Nasa Okolie
 
 -   
 
@@ -497,9 +497,11 @@ Finally, let's save the data to `ice_extent_yeary.parquet`.
 
 ```{r sea_ice_parquet, error=TRUE}
 # YOUR CODE HERE
-save_name <- "ice_extent_yeary.parquet"
+save_name <- "ice_extent_yearly.parquet"
 
 write_parquet(ice_extent_yearly, save_name)
+
+list.files()
 ```
 
 ```{r}
@@ -666,9 +668,9 @@ print("Countries in aware_countries that aren't in pop_data:")
 setdiff(aware_countries, pop_countries) |> sort()
 ```
 
-That's slightly less that we need to deal with! Overall, the `pop_data` has more countries in it than `aware_fixed_country`, so we'll just do our best to change the countries in `aware_fixed_country` to match `pop_data`. Note that there a lot of [controversial politics](https://www.youtube.com/watch?v=3nB688xBYdY) involved in defining a "country" (esp. Taiwan, Hong Kong, West Bank and Gaza, etc.), and I'll avoid these as much as possible for now.
+That's slightly less that we need to deal with! Overall, the `pop_country` has more countries in it than `aware_fixed_country`, so we'll just do our best to change the countries in `aware_fixed_country` to match `pop_data`. Note that there a lot of [controversial politics](https://www.youtube.com/watch?v=3nB688xBYdY) involved in defining a "country" (esp. Taiwan, Hong Kong, West Bank and Gaza, etc.), and I'll avoid these as much as possible for now.
 
-Use a `case_when()` statement to change the countries in `aware_fixed_country` where possible. Specifically, fix the following:
+Use a `case_when()` statement to [change the countries in `aware_fixed_country` where possible]{.underline}. Specifically, fix the following:
 
 -   "Bolivia (Plurinational State of)", "Congo (Democratic Republic of the)", "Egypt", "Hong Kong", "Lao People's Democratic Republic", "Slovakia", "North MAcedonia", "South Korea" (be careful with this one!), "Turkey", "Vietnam", "Yemen".
 
@@ -677,9 +679,25 @@ aware_fixed_country_match <- aware_fixed_country |>
     mutate(
         # Change country using a case_when statement
         # YOUR CODE HERE
+        country = case_when(
+          country == "Bolivia (Plurinational State of)" ~ "Bolivia",
+          country == "Congo (Democratic Republic of the)" ~ "Congo, Rep.",
+          country == "Egypt" ~ "Egypt, Arab Rep.",
+          country == "Hong Kong" ~ "Hong Kong SAR, China",
+          country == "Lao People's Democratic Republic" ~ "Lao PDR",
+          country == "Slovakia" ~ "Slovak Republic",
+          country == "North MAcedonia" ~ "North Macedonia",
+          country == "South Korea" ~ "Korea, Rep.",
+          country == "Turkey" ~ "Turkiye",
+          country == "Vietnam" ~ "Viet Nam",
+          country == "Yemen" ~ "Yemen, Rep.",
+          .default = country
+        )  
     )
 
+
 aware_countries <- aware_fixed_country_match |> pull(country)
+aware_fixed_country_match |> select(country) |> distinct() 
 print("Countries in aware_countries that aren't in pop_data:")
 setdiff(aware_countries, pop_countries) |> sort()
 ```
@@ -695,27 +713,80 @@ Now we can join! Use a [join](https://dplyr.tidyverse.org/reference/mutate-joins
 ```{r aware_pop, error=TRUE}
 # YOUR CODE HERE
 
+aware_pop <- aware_fixed_country_match |> 
+  inner_join(
+    pop_data, 
+    by = join_by(country)
+  ) |>
+  select(
+    country, 
+    SP.POP.TOTL, 
+    aware_no, 
+    aware_alittle, 
+    aware_moderate, 
+    aware_alot,
+    aware_refuse
+  ) |>
+  rename(total_population = "SP.POP.TOTL")
+
 aware_pop
+
 ```
 
 ```{r}
 . = ottr::check("tests/aware_pop.R")
 ```
 
-Finally, let's make sure the country names in `covid_2020` match those in `aware_pop`. In the end, all countries in `covid_2020` should be in `aware_pop` (but `aware_pop` will have countries that are not present in `covid_2020_match_country`, which is unavoidable).
+Finally, let's [make sure the country names in `covid_2020` match those in `aware_pop`]{.underline}. In the end, [all countries in `covid_2020` should be in `aware_pop`]{.underline} (but `aware_pop` will have countries that are not present in `covid_2020_match_country`, which is unavoidable).
 
 ```{r}
-aware_countries <- aware_pop |> pull(country) |> unique()
+aware_countries <- aware_pop |> pull(country) |> unique() 
 covid_countries <- covid_2020 |> pull(country) |> unique()
 
+# 221
+aware_pop |> select(country) |> unique()
+# 252
+covid_2020 |> select(country) |> unique()
+
+
+print("country that are in covid countries that are not in aware countries:")
 setdiff(covid_countries, aware_countries)
+print("")
+
+print("")
+print("country that are in aware_countries that are not in covid_countries (should be 0):")
 setdiff(aware_countries, covid_countries)
+length(setdiff(aware_countries, covid_countries))
 ```
 
 ```{r covid_2020_match_country, error=TRUE}
 # YOUR CODE HERE
+covid_2020_match_country <- covid_2020 |>
+    mutate(
+        # Change country using a case_when statement
+        # YOUR CODE HERE
+        country = case_when(
+          country == "Congo" ~ "Congo, Rep.",
+          country == "Hong Kong" ~ "Hong Kong SAR, China",
+          country == "Egypt" ~ "Egypt, Arab Rep.",
+          country == "Laos" ~ "Lao PDR",
+          country == "Slovakia" ~ "Slovak Republic",
+          country == "South Korea" ~ "Korea, Rep.",
+          country == "Turkey" ~ "Turkiye",
+          country == "Vietnam" ~ "Viet Nam", 
+          country == "Yemen" ~ "Yemen, Rep.",
+          .default = country
+        )  
+    )
 
-covid_2020_match_country
+
+covid_countries <- covid_2020_match_country |> pull(country) |> unique()
+
+print("")
+print("country that are in aware countries that are not in covid countries:")
+length(setdiff(aware_countries, covid_countries))
+print("")
+setdiff(aware_countries, covid_countries)
 ```
 
 ```{r}
@@ -728,6 +799,12 @@ Join `aware_pop` and `covid_2020_match_country`, again only keep countries that 
 
 ```{r aware_covid, error=TRUE}
 # YOUR CODE HERE
+aware_covid <- aware_pop |>
+  inner_join(
+    covid_2020_match_country, 
+    by = join_by(country)
+  ) |>
+  mutate(covid_per_capita = total_cases / total_population)
 
 aware_covid
 ```
@@ -745,6 +822,14 @@ aware_covid |>
         names_prefix = "aware_",
         names_to = "awareness",
         values_to = "value"
+    ) 
+
+aware_covid |>
+    pivot_longer(
+        cols = starts_with("aware_"),
+        names_prefix = "aware_",
+        names_to = "awareness",
+        values_to = "value"
     ) |>
     mutate(
         awareness = ordered(awareness,
@@ -752,7 +837,7 @@ aware_covid |>
         )
     ) |>
     ggplot() +
-    aes(x = value, y = cases_per_capita, colour = continent) +
+    aes(x = value, y = covid_per_capita, colour = continent) +
     geom_point() +
     geom_smooth(se = FALSE, method = "lm", formula = y ~ x) +
     facet_wrap(~ awareness, scales = "free") +
@@ -784,11 +869,16 @@ To make the data more convenient for Part 2, perform the following operations. T
 -   Use `janitor` to clean the names.
 -   Rename `country_name` to `country`.
 -   Remove any rows for which `life_ladder` is `NA`.
--   The data contain information from multiple years, and these years are not consistent for each country. For Part 2, these data will mainly be used to compare countries (we don't need the happiness over time). Filter the data so that we only have the *most recent* observation of the relevant values. (In my solution, I use the `slice()` function as part of a very short pipeline.)
+-   The data contain information from multiple years, and these years are not consistent for each country. For Part 2, these data will mainly be used to compare countries **(we don't need the happiness over time).** Filter the data so that we only have the *most recent* observation of the relevant values. (In my solution, I use the `slice()` function as part of a very short pipeline.)
 
 ```{r happiness}
 happiness <- read.xlsx("DataForTable2.1.xlsx") |>
     # YOUR CODE HERE
+    janitor::clean_names() |>
+    rename(country = "country_name") |>
+    drop_na(life_ladder) |>
+    group_by(country) |>
+    slice_max(year) # or slice_tail()
 
 happiness
 ```
