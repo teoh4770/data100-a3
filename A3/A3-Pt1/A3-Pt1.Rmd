@@ -287,10 +287,10 @@ To do this, you must choose whether to use `ObservYear` or `NameYear`.
 cyclones_data_update_2 <- cyclones_data_update_1 |>
     mutate(
         # YOUR CODE HERE
-        date = make_datetime(ObservYear, Month, Day)
+        date = make_datetime(ObservYear, Month, Day, Hour, Minute)
     )
 
-print(cyclones_data_update_2)
+cyclones_data_update_2
 ```
 
 ```{r}
@@ -468,7 +468,9 @@ ice_extent_yearly <- ice_extent_daily |>
     cols = c(min, max),
     names_to = "name",
     values_to = "value"
-  )
+  ) |>
+  # ice_extent_yearly: summarise() will keep your data as grouped df, but the autograder expects an ungrouped df. The GS autograder will ungroup your data for you (the tests on your computer will not have changed unless you download the new tests folder from below).
+  ungroup()
 
 ice_extent_yearly
 ```
@@ -584,12 +586,14 @@ In the chunk below, aggregate the data to be total cases in 2020, by country. Yo
 # aggregate the data to be total cases in 2020, by country
 # solution should have country, continent, total cases, 
 covid_2020 <- covid_cases |>
+  group_by(location) |>
   filter(year(date) == 2020) |>
-  group_by(location, continent) |>
-  summarise(
+  mutate(
     total_cases = sum(total_cases, na.rm = TRUE)
   ) |>
-  rename(country = location)
+  rename(country = location) |>
+  select(country, continent, total_cases) |>
+  distinct()
 
 
 covid_2020
@@ -681,7 +685,7 @@ aware_fixed_country_match <- aware_fixed_country |>
         # YOUR CODE HERE
         country = case_when(
           country == "Bolivia (Plurinational State of)" ~ "Bolivia",
-          country == "Congo (Democratic Republic of the)" ~ "Congo, Rep.",
+          country == "Congo (Democratic Republic of the)" ~ "Congo, Dem. Rep.",
           country == "Egypt" ~ "Egypt, Arab Rep.",
           country == "Hong Kong" ~ "Hong Kong SAR, China",
           country == "Lao People's Democratic Republic" ~ "Lao PDR",
@@ -694,7 +698,6 @@ aware_fixed_country_match <- aware_fixed_country |>
           .default = country
         )  
     )
-
 
 aware_countries <- aware_fixed_country_match |> pull(country)
 aware_fixed_country_match |> select(country) |> distinct() 
@@ -712,7 +715,6 @@ Now we can join! Use a [join](https://dplyr.tidyverse.org/reference/mutate-joins
 
 ```{r aware_pop, error=TRUE}
 # YOUR CODE HERE
-
 aware_pop <- aware_fixed_country_match |> 
   inner_join(
     pop_data, 
@@ -766,7 +768,7 @@ covid_2020_match_country <- covid_2020 |>
         # Change country using a case_when statement
         # YOUR CODE HERE
         country = case_when(
-          country == "Congo" ~ "Congo, Rep.",
+          country == "Congo" ~ "Congo, Dem. Rep.",
           country == "Hong Kong" ~ "Hong Kong SAR, China",
           country == "Egypt" ~ "Egypt, Arab Rep.",
           country == "Laos" ~ "Lao PDR",
